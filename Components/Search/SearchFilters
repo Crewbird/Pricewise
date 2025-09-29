@@ -1,0 +1,120 @@
+import React from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Filter, X } from "lucide-react";
+
+const categories = [
+  { value: "all", label: "All Categories" },
+  { value: "electronics", label: "Electronics" },
+  { value: "clothing", label: "Clothing" },
+  { value: "home", label: "Home & Garden" },
+  { value: "beauty", label: "Beauty" },
+  { value: "books", label: "Books" },
+  { value: "sports", label: "Sports" },
+  { value: "toys", label: "Toys" },
+  { value: "automotive", label: "Automotive" }
+];
+
+const priceRanges = [
+  { value: "all", label: "Any Price" },
+  { value: "under25", label: "Under $25" },
+  { value: "25to100", label: "$25 - $100" },
+  { value: "100to500", label: "$100 - $500" },
+  { value: "over500", label: "Over $500" }
+];
+
+export default function SearchFilters({ filters, setFilters }) {
+  const clearFilters = () => {
+    setFilters({
+      category: "all",
+      priceRange: "all",
+      sortBy: "relevance"
+    });
+  };
+
+  const hasActiveFilters = filters.category !== "all" || filters.priceRange !== "all";
+
+  return (
+    <div className="lg:w-80">
+      <Card className="sticky top-24">
+        <CardHeader className="pb-4">
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Filter className="h-5 w-5" />
+              Filters
+            </CardTitle>
+            {hasActiveFilters && (
+              <Button variant="ghost" size="sm" onClick={clearFilters}>
+                <X className="h-4 w-4 mr-1" />
+                Clear
+              </Button>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Category Filter */}
+          <div>
+            <h3 className="font-semibold text-slate-900 mb-3">Category</h3>
+            <div className="space-y-2">
+              {categories.map((category) => (
+                <Button
+                  key={category.value}
+                  variant={filters.category === category.value ? "default" : "ghost"}
+                  className="w-full justify-start"
+                  onClick={() => setFilters({...filters, category: category.value})}
+                >
+                  {category.label}
+                </Button>
+              ))}
+            </div>
+          </div>
+
+          {/* Price Range Filter */}
+          <div>
+            <h3 className="font-semibold text-slate-900 mb-3">Price Range</h3>
+            <div className="space-y-2">
+              {priceRanges.map((range) => (
+                <Button
+                  key={range.value}
+                  variant={filters.priceRange === range.value ? "default" : "ghost"}
+                  className="w-full justify-start"
+                  onClick={() => setFilters({...filters, priceRange: range.value})}
+                >
+                  {range.label}
+                </Button>
+              ))}
+            </div>
+          </div>
+
+          {/* Active Filters */}
+          {hasActiveFilters && (
+            <div>
+              <h3 className="font-semibold text-slate-900 mb-3">Active Filters</h3>
+              <div className="flex flex-wrap gap-2">
+                {filters.category !== "all" && (
+                  <Badge variant="secondary" className="gap-1">
+                    {categories.find(c => c.value === filters.category)?.label}
+                    <X 
+                      className="h-3 w-3 cursor-pointer" 
+                      onClick={() => setFilters({...filters, category: "all"})}
+                    />
+                  </Badge>
+                )}
+                {filters.priceRange !== "all" && (
+                  <Badge variant="secondary" className="gap-1">
+                    {priceRanges.find(p => p.value === filters.priceRange)?.label}
+                    <X 
+                      className="h-3 w-3 cursor-pointer" 
+                      onClick={() => setFilters({...filters, priceRange: "all"})}
+                    />
+                  </Badge>
+                )}
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
