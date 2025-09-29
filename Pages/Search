@@ -1,0 +1,335 @@
+import React, { useState, useEffect, useCallback } from "react";
+import { Product } from "@/entities/Product";
+import { InvokeLLM } from "@/integrations/Core";
+import { Search as SearchIcon, Filter, SortDesc, Grid, List, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+import SearchFilters from "../components/search/SearchFilters";
+import SearchResults from "../components/search/SearchResults";
+
+export default function Search() {
+  const [products, setProducts] = useState([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSearchingWeb, setIsSearchingWeb] = useState(false);
+  const [filters, setFilters] = useState({
+    category: "all",
+    priceRange: "all",
+    sortBy: "relevance"
+  });
+  const [viewMode, setViewMode] = useState("grid");
+
+  const loadAllProducts = async () => {
+    setIsLoading(true);
+    try {
+      const allProducts = await Product.list("-created_date", 50);
+      setProducts(allProducts);
+    } catch (error) {
+      console.error("Error loading products:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const searchWebForProducts = async (query) => {
+    setIsSearchingWeb(true);
+    try {
+      const aiResponse = await InvokeLLM({
+        prompt: `Search the web for "${query}" products and find the current best prices across multiple retailers. 
+        
+        For each product you find, provide:
+        - name (exact product name from retailers)
+        - brand (real brand name)
+        - description (detailed product description)
+        - category (one of: electronics, clothing, home, beauty, books, sports, toys, automotive)
+        - image_url (use a realistic Unsplash URL matching the product type)
+        - current market prices from different retailers
+        - Calculate our competitive price (should be at or near the lowest found price)
+        - original_retail_price (MSRP or highest price found)
+        - Calculate discount percentage
+        - supplier_info with the best price source
+        - realistic stock quantity (20-200)
+        - product features and specifications
+        - rating and review count estimates
+        
+        Find 8-12 real products that match the search query. Make sure prices are realistic and competitive.
+        Our price should be the lowest or very close to the lowest price you find on the web.`,
+        add_context_from_internet: true,
+        response_json_schema: {
+          type: "object",
+          properties: {
+            products: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  name: { type: "string" },
+                  brand: { type: "string" },
+                  category: { type: "string" },
+                  description: { type: "string" },
+                  image_url: { type: "string" },
+                  price: { type: "number" },
+                  original_retail_price: { type: "number" },
+                  our_cost: { type: "number" },
+                  supplier_info: {
+                    type: "object",
+                    properties: {
+                      supplier_name: { type: "string" },
+                      supplier_price: { type: "number" },
+                      supplier_url: { type: "string" },
+                      shipping_time: { type: "string" },
+                      availability: { type: "string" }
+                    }
+                  },
+                  stock_quantity: { type: "number" },
+                  shipping_weight: { type: "number" },
+                  rating: { type: "number" },
+                  review_count: { type: "number" },
+                  features: { type: "array", items: { type: "string" } },
+                  is_prime_eligible: { type: "boolean" },
+                  discount_percent: { type: "number" }
+                }
+              }
+            },
+            search_summary: { type: "string" }
+          }
+        }
+      });
+
+      if (aiResponse.products && aiResponse.products.length > 0) {
+        // Create products in the database for future reference
+        const createdProducts = [];
+        for (const productData of aiResponse.products) {
+          try {
+            // Check if product already exists to avoid duplicates
+            const existingProducts = await Product.filter({
+              name: productData.name,
+              brand: productData.brand
+            });
+            
+            if (existingProducts.length === 0) {
+              const created = await Product.create({
+                ...productData,
+                sku: `AUTO-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+              });
+              createdProducts.push(created);
+            } else {
+              // Update existing product with new pricing
+              const existing = existingProducts[0];
+              const updated = await Product.update(existing.id, {
+                price: productData.price,
+                original_retail_price: productData.original_retail_price,
+                supplier_info: productData.supplier_info,
+                stock_quantity: productData.stock_quantity,
+                discount_percent: productData.discount_percent
+              });
+              createdProducts.push(updated);
+            }
+          } catch (error) {
+            console.error("Error creating/updating product:", error);
+          }
+        }
+        setProducts(createdProducts);
+      }
+    } catch (error) {
+      console.error("Error searching web for products:", error);
+      setProducts([]);
+    } finally {
+      setIsSearchingWeb(false);
+    }
+  };
+
+  const performSearch = useCallback(async (query) => {
+    if (!query.trim()) {
+      loadAllProducts();
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      // First, check existing products in database
+      const existingProducts = await Product.list();
+      const matchingProducts = existingProducts.filter(product =>
+        product.name?.toLowerCase().includes(query.toLowerCase()) ||
+        product.brand?.toLowerCase().includes(query.toLowerCase()) ||
+        product.category?.toLowerCase().includes(query.toLowerCase())
+      );
+
+      if (matchingProducts.length > 0) {
+        setProducts(matchingProducts);
+        setIsLoading(false);
+        // Still search web in background for new products
+        searchWebForProducts(query);
+      } else {
+        // No existing products, search web immediately
+        setIsLoading(false);
+        await searchWebForProducts(query);
+      }
+    } catch (error) {
+      console.error("Error performing search:", error);
+      setProducts([]);
+      setIsLoading(false);
+      setIsSearchingWeb(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const query = urlParams.get("q");
+    if (query) {
+      setSearchQuery(query);
+      performSearch(query);
+    } else {
+      loadAllProducts();
+    }
+  }, [performSearch]);
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+    performSearch(searchQuery);
+  };
+
+  const filteredProducts = products.filter(product => {
+    if (filters.category !== "all" && product.category !== filters.category) {
+      return false;
+    }
+    
+    if (filters.priceRange !== "all") {
+      const price = product.price || 0;
+      switch (filters.priceRange) {
+        case "under25": return price < 25;
+        case "25to100": return price >= 25 && price <= 100;
+        case "100to500": return price > 100 && price <= 500;
+        case "over500": return price > 500;
+        default: return true;
+      }
+    }
+    
+    return true;
+  });
+
+  const sortedProducts = [...filteredProducts].sort((a, b) => {
+    switch (filters.sortBy) {
+      case "price_low": return (a.price || 0) - (b.price || 0);
+      case "price_high": return (b.price || 0) - (a.price || 0);
+      case "discount": return (b.discount_percent || 0) - (a.discount_percent || 0);
+      default: return 0;
+    }
+  });
+
+  return (
+    <div className="min-h-screen bg-slate-50">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Search Header */}
+        <div className="mb-8">
+          <form onSubmit={handleSearch} className="max-w-2xl mx-auto mb-6">
+            <div className="relative">
+              <SearchIcon className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
+              <Input
+                type="text"
+                placeholder="Search for any product - we'll find the best prices live!"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-12 pr-4 py-3 text-lg bg-white border-slate-200 focus:border-orange-500"
+              />
+              {(isLoading || isSearchingWeb) && (
+                <Loader2 className="absolute right-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-orange-500 animate-spin" />
+              )}
+            </div>
+          </form>
+
+          {searchQuery && (
+            <div className="text-center">
+              <h1 className="text-2xl font-bold text-slate-900 mb-2">
+                {isSearchingWeb ? "Searching the web for" : "Results for"} "{searchQuery}"
+              </h1>
+              <p className="text-slate-600">
+                {isSearchingWeb 
+                  ? "Finding the best prices across retailers..." 
+                  : `${sortedProducts.length} products found with live pricing`
+                }
+              </p>
+            </div>
+          )}
+
+          {isSearchingWeb && (
+            <Alert className="max-w-2xl mx-auto mt-4 border-orange-200 bg-orange-50">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <AlertDescription>
+                🔍 Scanning the web for the best deals on "{searchQuery}"... This may take a moment.
+              </AlertDescription>
+            </Alert>
+          )}
+        </div>
+
+        <div className="flex flex-col lg:flex-row gap-8">
+          {/* Filters Sidebar */}
+          <SearchFilters filters={filters} setFilters={setFilters} />
+
+          {/* Main Content */}
+          <div className="flex-1">
+            {/* View Controls */}
+            <div className="flex justify-between items-center mb-6">
+              <div className="flex items-center gap-4">
+                <Select value={filters.sortBy} onValueChange={(value) => setFilters({...filters, sortBy: value})}>
+                  <SelectTrigger className="w-48">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="relevance">Most Relevant</SelectItem>
+                    <SelectItem value="price_low">Price: Low to High</SelectItem>
+                    <SelectItem value="price_high">Price: High to Low</SelectItem>
+                    <SelectItem value="discount">Highest Discount</SelectItem>
+                  </SelectContent>
+                </Select>
+                
+                {products.length > 0 && !isSearchingWeb && (
+                  <Badge variant="outline" className="text-green-600 border-green-200">
+                    Live prices updated
+                  </Badge>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Button
+                  variant={viewMode === "grid" ? "default" : "outline"}
+                  size="icon"
+                  onClick={() => setViewMode("grid")}
+                >
+                  <Grid className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant={viewMode === "list" ? "default" : "outline"}
+                  size="icon"
+                  onClick={() => setViewMode("list")}
+                >
+                  <List className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+
+            {/* Results */}
+            <SearchResults 
+              products={sortedProducts}
+              isLoading={isLoading}
+              viewMode={viewMode}
+              isSearchingWeb={isSearchingWeb}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
