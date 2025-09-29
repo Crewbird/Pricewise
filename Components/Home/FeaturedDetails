@@ -1,0 +1,112 @@
+import React from "react";
+import { Link } from "react-router-dom";
+import { createPageUrl } from "@/utils";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Star, ExternalLink, Percent } from "lucide-react";
+
+export default function FeaturedDeals({ products, isLoading }) {
+  return (
+    <section className="py-16 bg-gradient-to-b from-white to-slate-50">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="text-center mb-12">
+          <h2 className="text-3xl font-bold text-slate-900 mb-4">
+            Today's Best Deals
+          </h2>
+          <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+            Handpicked deals with the biggest savings. Updated every hour.
+          </p>
+        </div>
+
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {isLoading ? (
+            Array(6).fill(0).map((_, i) => (
+              <Card key={i} className="border-0 shadow-lg">
+                <CardContent className="p-6">
+                  <Skeleton className="h-48 w-full mb-4 rounded-lg" />
+                  <Skeleton className="h-4 w-3/4 mb-2" />
+                  <Skeleton className="h-4 w-1/2 mb-4" />
+                  <Skeleton className="h-8 w-full" />
+                </CardContent>
+              </Card>
+            ))
+          ) : products.length > 0 ? (
+            products.map((product) => (
+              <Card key={product.id} className="border-0 shadow-lg hover:shadow-xl transition-shadow duration-300 group">
+                <CardContent className="p-0">
+                  <div className="relative">
+                    <img
+                      src={product.image_url || "https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=400"}
+                      alt={product.name}
+                      className="w-full h-48 object-cover rounded-t-lg"
+                    />
+                    {product.highest_discount > 0 && (
+                      <Badge className="absolute top-3 left-3 bg-red-500 text-white">
+                        <Percent className="w-3 h-3 mr-1" />
+                        {product.highest_discount}% OFF
+                      </Badge>
+                    )}
+                  </div>
+                  
+                  <div className="p-6">
+                    <h3 className="font-bold text-slate-900 mb-2 group-hover:text-emerald-600 transition-colors line-clamp-2">
+                      {product.name}
+                    </h3>
+                    
+                    <div className="flex items-center mb-3">
+                      <div className="flex items-center">
+                        {Array(5).fill(0).map((_, i) => (
+                          <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />
+                        ))}
+                      </div>
+                      <span className="text-sm text-slate-500 ml-2">(4.8)</span>
+                    </div>
+
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex flex-col">
+                        <span className="text-2xl font-bold text-emerald-600">
+                          ${product.lowest_price?.toFixed(2)}
+                        </span>
+                        {product.retailers?.[0]?.original_price > product.lowest_price && (
+                          <span className="text-sm text-slate-500 line-through">
+                            ${product.retailers[0].original_price.toFixed(2)}
+                          </span>
+                        )}
+                      </div>
+                      <Badge variant="outline" className="text-emerald-600 border-emerald-200">
+                        {product.retailers?.length || 0} stores
+                      </Badge>
+                    </div>
+
+                    <Link to={createPageUrl("ProductDetail") + "?id=" + product.id}>
+                      <Button className="w-full bg-slate-900 hover:bg-slate-800 text-white">
+                        Compare Prices
+                        <ExternalLink className="ml-2 w-4 h-4" />
+                      </Button>
+                    </Link>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          ) : (
+            <div className="col-span-full text-center py-12">
+              <p className="text-slate-500 text-lg">No featured deals available at the moment.</p>
+            </div>
+          )}
+        </div>
+
+        {products.length > 0 && (
+          <div className="text-center mt-12">
+            <Link to={createPageUrl("Search")}>
+              <Button variant="outline" size="lg" className="px-8">
+                View All Deals
+              </Button>
+            </Link>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
