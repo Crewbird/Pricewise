@@ -1,0 +1,130 @@
+import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+import { createPageUrl } from "@/utils";
+import { Product } from "@/entities/Product";
+import { 
+  TrendingUp, 
+  Zap, 
+  Shield, 
+  Search,
+  ArrowRight,
+  Star,
+  Percent
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import FeaturedDeals from "../components/home/FeaturedDeals";
+import HeroSection from "../components/home/HeroSection";
+import StatsSection from "../components/home/StatsSection";
+
+export default function Home() {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [featuredProducts, setFeaturedProducts] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    loadFeaturedProducts();
+  }, []);
+
+  const loadFeaturedProducts = async () => {
+    try {
+      const products = await Product.list("-lowest_price", 6);
+      setFeaturedProducts(products);
+    } catch (error) {
+      console.error("Error loading featured products:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      window.location.href = createPageUrl("Search") + "?q=" + encodeURIComponent(searchQuery);
+    }
+  };
+
+  return (
+    <div className="min-h-screen">
+      <HeroSection onSearch={handleSearch} searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
+      
+      <StatsSection />
+
+      {/* Features Section */}
+      <section className="py-16 bg-white">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-slate-900 mb-4">
+              Why Choose BestPrice?
+            </h2>
+            <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+              We do the hard work so you don't have to. Our AI-powered platform finds the best deals across thousands of retailers.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-8">
+            <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow duration-300">
+              <CardContent className="p-8 text-center">
+                <div className="w-16 h-16 bg-gradient-to-br from-emerald-100 to-emerald-200 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <Search className="h-8 w-8 text-emerald-600" />
+                </div>
+                <h3 className="text-xl font-bold text-slate-900 mb-4">Smart Price Comparison</h3>
+                <p className="text-slate-600">
+                  Compare prices across hundreds of retailers instantly. Never overpay again.
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow duration-300">
+              <CardContent className="p-8 text-center">
+                <div className="w-16 h-16 bg-gradient-to-br from-amber-100 to-amber-200 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <Percent className="h-8 w-8 text-amber-600" />
+                </div>
+                <h3 className="text-xl font-bold text-slate-900 mb-4">Automatic Coupons</h3>
+                <p className="text-slate-600">
+                  We automatically apply the best coupon codes and promotions to maximize your savings.
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow duration-300">
+              <CardContent className="p-8 text-center">
+                <div className="w-16 h-16 bg-gradient-to-br from-blue-100 to-blue-200 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <Shield className="h-8 w-8 text-blue-600" />
+                </div>
+                <h3 className="text-xl font-bold text-slate-900 mb-4">Secure Shopping</h3>
+                <p className="text-slate-600">
+                  Shop with confidence. We only partner with trusted retailers and secure payment methods.
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </section>
+
+      <FeaturedDeals products={featuredProducts} isLoading={isLoading} />
+
+      {/* CTA Section */}
+      <section className="py-16 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <div className="max-w-3xl mx-auto">
+            <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
+              Ready to Start Saving Money?
+            </h2>
+            <p className="text-xl text-slate-300 mb-8">
+              Join thousands of smart shoppers who save an average of 30% on every purchase.
+            </p>
+            <Link to={createPageUrl("Search")}>
+              <Button size="lg" className="bg-emerald-500 hover:bg-emerald-600 text-white px-8 py-6 text-lg">
+                Start Shopping Smart
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
