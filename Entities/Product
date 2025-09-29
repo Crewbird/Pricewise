@@ -1,0 +1,132 @@
+{
+  "name": "Product",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Product name"
+    },
+    "description": {
+      "type": "string",
+      "description": "Product description"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "electronics",
+        "clothing",
+        "home",
+        "beauty",
+        "books",
+        "sports",
+        "toys",
+        "automotive"
+      ],
+      "description": "Product category"
+    },
+    "brand": {
+      "type": "string",
+      "description": "Product brand"
+    },
+    "image_url": {
+      "type": "string",
+      "description": "Product image URL"
+    },
+    "images": {
+      "type": "array",
+      "description": "Additional product images",
+      "items": {
+        "type": "string"
+      }
+    },
+    "sku": {
+      "type": "string",
+      "description": "Product SKU"
+    },
+    "price": {
+      "type": "number",
+      "description": "Customer-facing price (includes our markup)"
+    },
+    "original_retail_price": {
+      "type": "number",
+      "description": "Original retail price for comparison"
+    },
+    "our_cost": {
+      "type": "number",
+      "description": "Our cost from best supplier (internal)"
+    },
+    "supplier_info": {
+      "type": "object",
+      "description": "Best supplier information (internal)",
+      "properties": {
+        "supplier_name": {
+          "type": "string"
+        },
+        "supplier_price": {
+          "type": "number"
+        },
+        "supplier_url": {
+          "type": "string"
+        },
+        "shipping_time": {
+          "type": "string"
+        },
+        "availability": {
+          "type": "string"
+        }
+      }
+    },
+    "stock_quantity": {
+      "type": "number",
+      "default": 100,
+      "description": "Available stock in our fulfillment centers"
+    },
+    "shipping_weight": {
+      "type": "number",
+      "description": "Weight in pounds for shipping calculation"
+    },
+    "dimensions": {
+      "type": "object",
+      "properties": {
+        "length": {
+          "type": "number"
+        },
+        "width": {
+          "type": "number"
+        },
+        "height": {
+          "type": "number"
+        }
+      }
+    },
+    "rating": {
+      "type": "number",
+      "description": "Average customer rating"
+    },
+    "review_count": {
+      "type": "number",
+      "description": "Number of customer reviews"
+    },
+    "features": {
+      "type": "array",
+      "description": "Key product features",
+      "items": {
+        "type": "string"
+      }
+    },
+    "is_prime_eligible": {
+      "type": "boolean",
+      "default": true,
+      "description": "Eligible for fast shipping"
+    },
+    "discount_percent": {
+      "type": "number",
+      "description": "Discount percentage from original retail price"
+    }
+  },
+  "required": [
+    "name",
+    "category",
+    "price"
+  ]
+}
