@@ -1,0 +1,21 @@
+{
+  "name": "Wishlist",
+  "type": "object",
+  "properties": {
+    "product_id": {
+      "type": "string",
+      "description": "Reference to product"
+    },
+    "target_price": {
+      "type": "number",
+      "description": "Price alert threshold"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Personal notes"
+    }
+  },
+  "required": [
+    "product_id"
+  ]
+}
