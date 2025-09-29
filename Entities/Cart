@@ -1,0 +1,24 @@
+{
+  "name": "Cart",
+  "type": "object",
+  "properties": {
+    "product_id": {
+      "type": "string",
+      "description": "Reference to product"
+    },
+    "quantity": {
+      "type": "number",
+      "default": 1,
+      "description": "Quantity of items"
+    },
+    "price_at_time": {
+      "type": "number",
+      "description": "Price when added to cart"
+    }
+  },
+  "required": [
+    "product_id",
+    "quantity",
+    "price_at_time"
+  ]
+}
